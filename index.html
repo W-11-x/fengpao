@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+    <meta name="theme-color" content="#173b34">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="峰跑">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>峰跑</title>
+    <link rel="manifest" href="manifest.webmanifest">
+    <link rel="apple-touch-icon" href="assets/images/icon-192.png">
+    <link rel="stylesheet" href="css/styles.css">
+  </head>
+  <body>
+    <div id="app">
+      <main class="game-shell" aria-label="峰跑游戏区域">
+        <canvas id="gameCanvas" width="1280" height="720" aria-label="峰跑 Canvas 游戏画面"></canvas>
+
+        <div class="orientation-hint" aria-hidden="true">
+          横屏体验更好
+        </div>
+
+        <section id="startOverlay" class="overlay">
+          <div class="overlay-panel">
+            <p class="eyebrow">HTML5 Canvas 跑酷小游戏</p>
+            <h1>峰跑</h1>
+            <p class="summary">自动向右奔跑，只控制跳跃、下蹲和加速。手机 Safari 请先点开始，音乐才会播放。</p>
+            <div class="key-row" aria-label="操作说明">
+              <span>跳跃：空格 / W / ↑ / 右下按钮</span>
+              <span>下蹲：S / ↓ / 左下按钮</span>
+              <span>加速：Shift / 右侧按钮</span>
+            </div>
+            <button id="startButton" class="primary-action" type="button">开始游戏</button>
+            <p id="audioNotice" class="audio-notice">背景音乐读取：assets/music/bgm.mp3</p>
+          </div>
+        </section>
+
+        <section id="messageOverlay" class="overlay overlay-hidden" aria-live="polite">
+          <div class="overlay-panel compact">
+            <p id="messageEyebrow" class="eyebrow">本局结束</p>
+            <h2 id="messageTitle">再跑一次？</h2>
+            <p id="messageBody">按 R 或点击按钮重新开始。</p>
+            <button id="restartButton" class="primary-action" type="button">重新开始</button>
+          </div>
+        </section>
+
+        <nav id="touchControls" class="touch-controls" aria-label="手机触屏控制">
+          <button id="crouchButton" class="control-button crouch" type="button" aria-label="下蹲">下蹲</button>
+          <button id="boostButton" class="control-button boost" type="button" aria-label="按住加速">加速</button>
+          <button id="jumpButton" class="control-button jump" type="button" aria-label="跳跃">跳跃</button>
+        </nav>
+      </main>
+    </div>
+
+    <script type="module" src="src/game.js"></script>
+  </body>
+</html>
