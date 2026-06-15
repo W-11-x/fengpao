@@ -16,6 +16,7 @@ const touchButtons = {
   crouch: document.querySelector("#crouchButton"),
   boost: document.querySelector("#boostButton")
 };
+const touchControls = document.querySelector("#touchControls");
 
 const STATE = {
   READY: "ready",
@@ -1031,11 +1032,17 @@ function setAction(action, active) {
 function bindHoldButton(button, action) {
   const start = (event) => {
     event.preventDefault();
+    if (button.setPointerCapture && event.pointerId !== undefined) {
+      button.setPointerCapture(event.pointerId);
+    }
     setAction(action, true);
   };
 
   const end = (event) => {
     event.preventDefault();
+    if (button.releasePointerCapture && event.pointerId !== undefined && button.hasPointerCapture?.(event.pointerId)) {
+      button.releasePointerCapture(event.pointerId);
+    }
     if (action !== "jump") {
       setAction(action, false);
     }
@@ -1045,6 +1052,37 @@ function bindHoldButton(button, action) {
   button.addEventListener("pointerup", end);
   button.addEventListener("pointercancel", end);
   button.addEventListener("pointerleave", end);
+  button.addEventListener("lostpointercapture", end);
+}
+
+function preventDefaultEvent(event) {
+  if (event.cancelable) {
+    event.preventDefault();
+  }
+}
+
+function bindTouchDefaultBlocker(element) {
+  if (!element) {
+    return;
+  }
+
+  for (const eventName of ["touchstart", "touchmove", "touchend", "touchcancel"]) {
+    element.addEventListener(eventName, preventDefaultEvent, { passive: false });
+  }
+}
+
+function bindMobileBrowserGuards() {
+  document.addEventListener("contextmenu", preventDefaultEvent);
+  document.addEventListener("selectstart", preventDefaultEvent);
+  document.addEventListener("dragstart", preventDefaultEvent);
+
+  document.querySelectorAll("img, canvas, button").forEach((element) => {
+    element.draggable = false;
+  });
+
+  bindTouchDefaultBlocker(canvas);
+  bindTouchDefaultBlocker(touchControls);
+  Object.values(touchButtons).forEach(bindTouchDefaultBlocker);
 }
 
 function bindControls() {
@@ -1112,6 +1150,7 @@ function bindPageButtons() {
 async function boot() {
   fitCanvasToDisplay();
   window.addEventListener("resize", fitCanvasToDisplay);
+  bindMobileBrowserGuards();
   bindControls();
   bindPageButtons();
   registerServiceWorker();

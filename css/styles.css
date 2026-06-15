@@ -5,22 +5,34 @@
   color: #f7fff2;
 }
 
-* {
+*,
+*::before,
+*::after {
   box-sizing: border-box;
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
   -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   width: 100%;
+  height: 100%;
   min-height: 100%;
   margin: 0;
+  padding: 0;
   overflow: hidden;
   overscroll-behavior: none;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: none;
   touch-action: none;
 }
 
 body {
+  position: fixed;
+  inset: 0;
   display: grid;
   place-items: center;
   background:
@@ -30,14 +42,22 @@ body {
 
 button {
   font: inherit;
+  border: 0;
+  outline: none;
+  appearance: none;
+  -webkit-appearance: none;
+  touch-action: none;
 }
 
 #app {
   width: 100vw;
-  min-height: 100svh;
+  height: 100%;
+  min-height: 100%;
   display: grid;
   place-items: center;
   padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+  overflow: hidden;
+  touch-action: none;
 }
 
 .game-shell {
@@ -49,6 +69,11 @@ button {
   background: #82bca5;
   border-radius: 8px;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.35);
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
 #gameCanvas {
@@ -57,6 +82,11 @@ button {
   height: 100%;
   image-rendering: auto;
   user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
 .overlay {
@@ -153,19 +183,30 @@ h2 {
   inset: 0;
   z-index: 4;
   pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-touch-callout: none;
+  touch-action: none;
 }
 
 .control-button {
   position: absolute;
+  z-index: 10;
   width: clamp(74px, 14vw, 118px);
   height: clamp(74px, 14vw, 118px);
   border: 2px solid rgba(255, 255, 255, 0.54);
+  outline: none;
   border-radius: 999px;
   color: #fffdf4;
   background: rgba(18, 49, 42, 0.56);
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.1), 0 12px 30px rgba(0, 0, 0, 0.28);
   pointer-events: auto;
   user-select: none;
+  -webkit-user-select: none;
+  -ms-user-select: none;
+  -webkit-user-drag: none;
+  -webkit-touch-callout: none;
   touch-action: none;
   font-size: clamp(15px, 3vw, 20px);
   font-weight: 900;
