@@ -24,6 +24,8 @@ const STATE = {
   GAME_OVER: "game-over"
 };
 
+const BUILD_LABEL = "v12";
+
 const world = {
   groundY: 612,
   gravity: 2200,
@@ -49,6 +51,8 @@ const player = {
   grounded: true,
   jumpsUsed: 0,
   maxJumps: 2,
+  jumpCount: 0,
+  airJumpsLeft: 1,
   doubleJumpTimer: 0,
   invincibleTimer: 0,
   trailTimer: 0
@@ -227,6 +231,8 @@ function resetGame() {
   player.lastAnimationState = "idle";
   player.grounded = true;
   player.jumpsUsed = 0;
+  player.jumpCount = 0;
+  player.airJumpsLeft = 1;
   player.doubleJumpTimer = 0;
   player.invincibleTimer = 0;
   player.trailTimer = 0;
@@ -415,7 +421,9 @@ function performJump(isDoubleJump) {
   player.velocityY = jumpVelocity;
   player.grounded = false;
   player.state = "jumping";
-  player.jumpsUsed = Math.min(player.jumpsUsed + 1, player.maxJumps);
+  player.jumpCount = isDoubleJump ? 2 : 1;
+  player.jumpsUsed = player.jumpCount;
+  player.airJumpsLeft = isDoubleJump ? 0 : 1;
   player.doubleJumpTimer = isDoubleJump ? 0.75 : 0;
   input.crouch = false;
 
@@ -428,17 +436,17 @@ function performJump(isDoubleJump) {
 }
 
 function requestJump() {
-  if (player.grounded) {
+  if (player.jumpCount === 0 && player.grounded) {
     performJump(false);
     return;
   }
 
-  if (player.jumpsUsed === 1) {
+  if (player.airJumpsLeft > 0) {
     performJump(true);
     return;
   }
 
-  if (player.jumpsUsed === 0) {
+  if (player.jumpCount === 0) {
     performJump(false);
   }
 }
@@ -493,11 +501,13 @@ function updatePlayer(dt) {
       player.velocityY = 0;
       player.grounded = true;
       player.jumpsUsed = 0;
+      player.jumpCount = 0;
+      player.airJumpsLeft = 1;
       break;
     }
   }
 
-  if (player.footY >= world.groundY) {
+  if (player.footY >= world.groundY && player.velocityY >= 0) {
     if (!player.grounded && player.velocityY > 700) {
       spawnDust(player.x, world.groundY, 10, "rgba(216, 237, 196, 0.72)");
     }
@@ -505,6 +515,8 @@ function updatePlayer(dt) {
     player.velocityY = 0;
     player.grounded = true;
     player.jumpsUsed = 0;
+    player.jumpCount = 0;
+    player.airJumpsLeft = 1;
   }
 
   if (player.invincibleTimer > 0) {
@@ -993,6 +1005,12 @@ function drawUi() {
     ctx.textAlign = "start";
   }
 
+  ctx.fillStyle = "rgba(247, 255, 242, 0.58)";
+  ctx.font = "800 13px Microsoft YaHei, sans-serif";
+  ctx.textAlign = "right";
+  ctx.fillText(BUILD_LABEL, CONFIG.WIDTH - 20, CONFIG.HEIGHT - 18);
+  ctx.textAlign = "start";
+
   ctx.restore();
 }
 
@@ -1078,10 +1096,16 @@ function bindHoldButton(button, action) {
   }
 
   let lastTouchStart = 0;
+  let lastActivation = 0;
 
   const start = (event) => {
     event.preventDefault();
     event.stopPropagation();
+    const now = performance.now();
+    if (now - lastActivation < 80) {
+      return;
+    }
+    lastActivation = now;
     if (button.setPointerCapture && event.pointerId !== undefined) {
       button.setPointerCapture(event.pointerId);
     }
@@ -1110,6 +1134,13 @@ function bindHoldButton(button, action) {
       return;
     }
     start(event);
+  });
+  button.addEventListener("click", (event) => {
+    event.preventDefault();
+    event.stopPropagation();
+    if (performance.now() - lastActivation > 650) {
+      start(event);
+    }
   });
   button.addEventListener("pointerup", end);
   button.addEventListener("pointercancel", end);
