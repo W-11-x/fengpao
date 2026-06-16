@@ -1,4 +1,4 @@
-const CACHE_NAME = "fengpao-v8";
+const CACHE_NAME = "fengpao-v9";
 
 const CORE_ASSETS = [
   "./",

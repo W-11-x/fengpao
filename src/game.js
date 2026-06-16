@@ -50,6 +50,7 @@ const player = {
   jumpsUsed: 0,
   maxJumps: 2,
   airborneTimer: 0,
+  pendingDoubleJump: false,
   doubleJumpTimer: 0,
   invincibleTimer: 0,
   trailTimer: 0
@@ -74,7 +75,6 @@ let spritesReady = false;
 let musicTried = false;
 
 const input = {
-  jumpRequests: 0,
   crouch: false,
   boost: false
 };
@@ -230,6 +230,7 @@ function resetGame() {
   player.grounded = true;
   player.jumpsUsed = 0;
   player.airborneTimer = 0;
+  player.pendingDoubleJump = false;
   player.doubleJumpTimer = 0;
   player.invincibleTimer = 0;
   player.trailTimer = 0;
@@ -242,7 +243,6 @@ function resetGame() {
   distance = 0;
   currentSpeed = world.baseSpeed;
   elapsed = 0;
-  input.jumpRequests = 0;
   input.crouch = false;
   input.boost = false;
 
@@ -310,7 +310,7 @@ function rectsOverlap(a, b) {
 
 function queueJump() {
   if (state === STATE.RUNNING) {
-    input.jumpRequests = Math.min(input.jumpRequests + 1, player.maxJumps);
+    requestJump();
   } else if (state === STATE.GAME_OVER) {
     beginGame();
   }
@@ -411,34 +411,43 @@ function spawnCoinArc(startX, y, count) {
   }
 }
 
-function handleJump() {
-  if (input.jumpRequests <= 0) {
-    return;
-  }
+function performJump(isDoubleJump) {
+  const jumpVelocity = isDoubleJump
+    ? (input.boost ? -980 : -920)
+    : (input.boost ? -820 : -760);
 
-  const doubleJumpReady = player.airborneTimer >= 0.08;
-  const canJump = player.grounded || (player.jumpsUsed < player.maxJumps && doubleJumpReady);
-  if (!canJump) {
-    if (player.jumpsUsed >= player.maxJumps) {
-      input.jumpRequests = 0;
-    }
-    return;
-  }
-
-  input.jumpRequests -= 1;
-  const isDoubleJump = !player.grounded && player.jumpsUsed > 0;
-  player.velocityY = input.boost ? -820 : -760;
+  player.velocityY = jumpVelocity;
   player.grounded = false;
-  player.jumpsUsed += 1;
+  player.jumpsUsed = Math.min(player.jumpsUsed + 1, player.maxJumps);
   player.airborneTimer = 0;
-  player.doubleJumpTimer = isDoubleJump ? 0.45 : 0;
+  player.pendingDoubleJump = false;
+  player.doubleJumpTimer = isDoubleJump ? 0.55 : 0;
   input.crouch = false;
+
   spawnDust(
     player.x,
     isDoubleJump ? player.footY - playerHeight() * 0.55 : player.footY,
-    isDoubleJump ? 14 : 8,
-    isDoubleJump ? "rgba(255, 246, 170, 0.78)" : "rgba(255, 224, 138, 0.72)"
+    isDoubleJump ? 18 : 8,
+    isDoubleJump ? "rgba(184, 240, 255, 0.86)" : "rgba(255, 224, 138, 0.72)"
   );
+}
+
+function requestJump() {
+  if (player.grounded || player.jumpsUsed === 0) {
+    performJump(false);
+    return;
+  }
+
+  if (player.jumpsUsed >= player.maxJumps) {
+    return;
+  }
+
+  if (player.airborneTimer < 0.1) {
+    player.pendingDoubleJump = true;
+    return;
+  }
+
+  performJump(true);
 }
 
 function updatePlayerState() {
@@ -473,8 +482,6 @@ function updatePlayerAnimation(dt) {
 }
 
 function updatePlayer(dt) {
-  handleJump();
-
   const targetSpeed = input.boost ? world.boostSpeed : world.baseSpeed;
   currentSpeed += (targetSpeed - currentSpeed) * Math.min(1, dt * 7);
   currentSpeed += Math.min(distance / 12000, 1) * 85 * dt;
@@ -494,6 +501,7 @@ function updatePlayer(dt) {
       player.grounded = true;
       player.jumpsUsed = 0;
       player.airborneTimer = 0;
+      player.pendingDoubleJump = false;
       break;
     }
   }
@@ -507,10 +515,14 @@ function updatePlayer(dt) {
     player.grounded = true;
     player.jumpsUsed = 0;
     player.airborneTimer = 0;
+    player.pendingDoubleJump = false;
   }
 
   if (!player.grounded) {
     player.airborneTimer += dt;
+    if (player.pendingDoubleJump && player.airborneTimer >= 0.1 && player.jumpsUsed < player.maxJumps) {
+      performJump(true);
+    }
   }
 
   if (player.invincibleTimer > 0) {
