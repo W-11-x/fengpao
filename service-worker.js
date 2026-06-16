@@ -1,4 +1,4 @@
-const CACHE_NAME = "fengpao-v9";
+const CACHE_NAME = "fengpao-v11";
 
 const CORE_ASSETS = [
   "./",
@@ -36,8 +36,45 @@ self.addEventListener("activate", (event) => {
   self.clients.claim();
 });
 
+function shouldUseNetworkFirst(request) {
+  const url = new URL(request.url);
+  if (url.origin !== self.location.origin) {
+    return false;
+  }
+
+  return [
+    "/",
+    "/index.html",
+    "/css/styles.css",
+    "/src/config.js",
+    "/src/game.js",
+    "/manifest.webmanifest",
+    "/service-worker.js"
+  ].some((path) => url.pathname.endsWith(path));
+}
+
+function cacheCopy(request, response) {
+  if (response.ok) {
+    const copy = response.clone();
+    caches.open(CACHE_NAME).then((cache) => {
+      cache.put(request, copy);
+    });
+  }
+
+  return response;
+}
+
 self.addEventListener("fetch", (event) => {
   if (event.request.method !== "GET") {
+    return;
+  }
+
+  if (shouldUseNetworkFirst(event.request)) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => cacheCopy(event.request, response))
+        .catch(() => caches.match(event.request))
+    );
     return;
   }
 
@@ -47,15 +84,7 @@ self.addEventListener("fetch", (event) => {
         return cached;
       }
 
-      return fetch(event.request).then((response) => {
-        if (response.ok) {
-          const copy = response.clone();
-          caches.open(CACHE_NAME).then((cache) => {
-            cache.put(event.request, copy);
-          });
-        }
-        return response;
-      });
+      return fetch(event.request).then((response) => cacheCopy(event.request, response));
     })
   );
 });

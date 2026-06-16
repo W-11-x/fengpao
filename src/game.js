@@ -49,8 +49,6 @@ const player = {
   grounded: true,
   jumpsUsed: 0,
   maxJumps: 2,
-  airborneTimer: 0,
-  pendingDoubleJump: false,
   doubleJumpTimer: 0,
   invincibleTimer: 0,
   trailTimer: 0
@@ -229,8 +227,6 @@ function resetGame() {
   player.lastAnimationState = "idle";
   player.grounded = true;
   player.jumpsUsed = 0;
-  player.airborneTimer = 0;
-  player.pendingDoubleJump = false;
   player.doubleJumpTimer = 0;
   player.invincibleTimer = 0;
   player.trailTimer = 0;
@@ -413,15 +409,14 @@ function spawnCoinArc(startX, y, count) {
 
 function performJump(isDoubleJump) {
   const jumpVelocity = isDoubleJump
-    ? (input.boost ? -980 : -920)
+    ? (input.boost ? -1120 : -1050)
     : (input.boost ? -820 : -760);
 
   player.velocityY = jumpVelocity;
   player.grounded = false;
+  player.state = "jumping";
   player.jumpsUsed = Math.min(player.jumpsUsed + 1, player.maxJumps);
-  player.airborneTimer = 0;
-  player.pendingDoubleJump = false;
-  player.doubleJumpTimer = isDoubleJump ? 0.55 : 0;
+  player.doubleJumpTimer = isDoubleJump ? 0.75 : 0;
   input.crouch = false;
 
   spawnDust(
@@ -433,21 +428,19 @@ function performJump(isDoubleJump) {
 }
 
 function requestJump() {
-  if (player.grounded || player.jumpsUsed === 0) {
+  if (player.grounded) {
     performJump(false);
     return;
   }
 
-  if (player.jumpsUsed >= player.maxJumps) {
+  if (player.jumpsUsed === 1) {
+    performJump(true);
     return;
   }
 
-  if (player.airborneTimer < 0.1) {
-    player.pendingDoubleJump = true;
-    return;
+  if (player.jumpsUsed === 0) {
+    performJump(false);
   }
-
-  performJump(true);
 }
 
 function updatePlayerState() {
@@ -500,8 +493,6 @@ function updatePlayer(dt) {
       player.velocityY = 0;
       player.grounded = true;
       player.jumpsUsed = 0;
-      player.airborneTimer = 0;
-      player.pendingDoubleJump = false;
       break;
     }
   }
@@ -514,15 +505,6 @@ function updatePlayer(dt) {
     player.velocityY = 0;
     player.grounded = true;
     player.jumpsUsed = 0;
-    player.airborneTimer = 0;
-    player.pendingDoubleJump = false;
-  }
-
-  if (!player.grounded) {
-    player.airborneTimer += dt;
-    if (player.pendingDoubleJump && player.airborneTimer >= 0.1 && player.jumpsUsed < player.maxJumps) {
-      performJump(true);
-    }
   }
 
   if (player.invincibleTimer > 0) {
@@ -1091,10 +1073,15 @@ function setAction(action, active) {
 }
 
 function bindHoldButton(button, action) {
+  if (!button) {
+    return;
+  }
+
   let lastTouchStart = 0;
 
   const start = (event) => {
     event.preventDefault();
+    event.stopPropagation();
     if (button.setPointerCapture && event.pointerId !== undefined) {
       button.setPointerCapture(event.pointerId);
     }
@@ -1103,6 +1090,7 @@ function bindHoldButton(button, action) {
 
   const end = (event) => {
     event.preventDefault();
+    event.stopPropagation();
     if (button.releasePointerCapture && event.pointerId !== undefined && button.hasPointerCapture?.(event.pointerId)) {
       button.releasePointerCapture(event.pointerId);
     }
@@ -1158,7 +1146,7 @@ function bindMobileBrowserGuards() {
   });
 
   document.addEventListener("touchstart", (event) => {
-    if (state === STATE.RUNNING && !event.target.closest("#startButton, #restartButton")) {
+    if (state === STATE.RUNNING && !event.target.closest("#startButton, #restartButton, .control-button")) {
       preventDefaultEvent(event);
     }
   }, { passive: false, capture: true });
@@ -1170,7 +1158,7 @@ function bindMobileBrowserGuards() {
   }, { passive: false, capture: true });
 
   document.addEventListener("touchend", (event) => {
-    if (state === STATE.RUNNING) {
+    if (state === STATE.RUNNING && !event.target.closest(".control-button")) {
       preventDefaultEvent(event);
     }
   }, { passive: false, capture: true });
