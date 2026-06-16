@@ -1076,6 +1076,12 @@ function bindMobileBrowserGuards() {
   document.addEventListener("selectstart", preventDefaultEvent);
   document.addEventListener("dragstart", preventDefaultEvent);
 
+  Object.values(touchButtons).forEach((button) => {
+    const label = button.dataset.label || button.textContent.trim() || button.getAttribute("aria-label") || "";
+    button.dataset.label = label;
+    button.textContent = "";
+  });
+
   document.querySelectorAll("img, canvas, button").forEach((element) => {
     element.draggable = false;
   });
