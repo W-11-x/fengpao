@@ -47,6 +47,9 @@ const player = {
   currentFrame: 0,
   lastAnimationState: "idle",
   grounded: true,
+  jumpsUsed: 0,
+  maxJumps: 2,
+  doubleJumpTimer: 0,
   invincibleTimer: 0,
   trailTimer: 0
 };
@@ -224,6 +227,8 @@ function resetGame() {
   player.currentFrame = 0;
   player.lastAnimationState = "idle";
   player.grounded = true;
+  player.jumpsUsed = 0;
+  player.doubleJumpTimer = 0;
   player.invincibleTimer = 0;
   player.trailTimer = 0;
 
@@ -411,11 +416,20 @@ function handleJump() {
 
   input.jumpQueued = false;
 
-  if (player.grounded) {
+  const canJump = player.grounded || player.jumpsUsed < player.maxJumps;
+  if (canJump) {
+    const isDoubleJump = !player.grounded && player.jumpsUsed > 0;
     player.velocityY = input.boost ? -820 : -760;
     player.grounded = false;
+    player.jumpsUsed += 1;
+    player.doubleJumpTimer = isDoubleJump ? 0.45 : 0;
     input.crouch = false;
-    spawnDust(player.x, player.footY, 8);
+    spawnDust(
+      player.x,
+      isDoubleJump ? player.footY - playerHeight() * 0.55 : player.footY,
+      isDoubleJump ? 14 : 8,
+      isDoubleJump ? "rgba(255, 246, 170, 0.78)" : "rgba(255, 224, 138, 0.72)"
+    );
   }
 }
 
@@ -470,6 +484,7 @@ function updatePlayer(dt) {
       player.footY = platform.y;
       player.velocityY = 0;
       player.grounded = true;
+      player.jumpsUsed = 0;
       break;
     }
   }
@@ -481,10 +496,15 @@ function updatePlayer(dt) {
     player.footY = world.groundY;
     player.velocityY = 0;
     player.grounded = true;
+    player.jumpsUsed = 0;
   }
 
   if (player.invincibleTimer > 0) {
     player.invincibleTimer -= dt;
+  }
+
+  if (player.doubleJumpTimer > 0) {
+    player.doubleJumpTimer -= dt;
   }
 
   if (input.boost && player.grounded) {
@@ -983,16 +1003,20 @@ function drawActionBadges() {
   if (!player.grounded) {
     badges.push({ text: "跳跃", color: "#fff06f" });
   }
+  if (player.doubleJumpTimer > 0) {
+    badges.push({ text: "二段跳", color: "#b8f0ff" });
+  }
 
   let x = 42;
   for (const badge of badges) {
+    const badgeWidth = badge.text.length > 2 ? 90 : 74;
     ctx.fillStyle = badge.color;
-    roundedRect(x, 146, 74, 30, 8);
+    roundedRect(x, 146, badgeWidth, 30, 8);
     ctx.fill();
     ctx.fillStyle = "#173b34";
     ctx.font = "900 16px Microsoft YaHei, sans-serif";
     ctx.fillText(badge.text, x + 18, 167);
-    x += 84;
+    x += badgeWidth + 10;
   }
 }
 
