@@ -954,6 +954,17 @@ function drawUi() {
     ctx.fillText(spritesReady ? "角色精灵动画：assets/player/*.png" : "缺少角色动画帧，正在使用备用角色", 462, 172);
   }
 
+  if (window.innerHeight > window.innerWidth) {
+    ctx.fillStyle = "rgba(255, 224, 138, 0.92)";
+    roundedRect(CONFIG.WIDTH / 2 - 142, 150, 284, 54, 27);
+    ctx.fill();
+    ctx.fillStyle = "#173b34";
+    ctx.font = "900 28px Microsoft YaHei, PingFang SC, sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("横屏体验更好", CONFIG.WIDTH / 2, 186);
+    ctx.textAlign = "start";
+  }
+
   ctx.restore();
 }
 
@@ -1075,6 +1086,31 @@ function bindMobileBrowserGuards() {
   document.addEventListener("contextmenu", preventDefaultEvent);
   document.addEventListener("selectstart", preventDefaultEvent);
   document.addEventListener("dragstart", preventDefaultEvent);
+
+  document.addEventListener("selectionchange", () => {
+    const selection = window.getSelection?.();
+    if (selection && selection.rangeCount > 0) {
+      selection.removeAllRanges();
+    }
+  });
+
+  document.addEventListener("touchstart", (event) => {
+    if (state === STATE.RUNNING && !event.target.closest("#startButton, #restartButton")) {
+      preventDefaultEvent(event);
+    }
+  }, { passive: false, capture: true });
+
+  document.addEventListener("touchmove", (event) => {
+    if (state === STATE.RUNNING) {
+      preventDefaultEvent(event);
+    }
+  }, { passive: false, capture: true });
+
+  document.addEventListener("touchend", (event) => {
+    if (state === STATE.RUNNING) {
+      preventDefaultEvent(event);
+    }
+  }, { passive: false, capture: true });
 
   Object.values(touchButtons).forEach((button) => {
     const label = button.dataset.label || button.textContent.trim() || button.getAttribute("aria-label") || "";
