@@ -49,6 +49,7 @@ const player = {
   grounded: true,
   jumpsUsed: 0,
   maxJumps: 2,
+  airborneTimer: 0,
   doubleJumpTimer: 0,
   invincibleTimer: 0,
   trailTimer: 0
@@ -73,7 +74,7 @@ let spritesReady = false;
 let musicTried = false;
 
 const input = {
-  jumpQueued: false,
+  jumpRequests: 0,
   crouch: false,
   boost: false
 };
@@ -228,6 +229,7 @@ function resetGame() {
   player.lastAnimationState = "idle";
   player.grounded = true;
   player.jumpsUsed = 0;
+  player.airborneTimer = 0;
   player.doubleJumpTimer = 0;
   player.invincibleTimer = 0;
   player.trailTimer = 0;
@@ -240,7 +242,7 @@ function resetGame() {
   distance = 0;
   currentSpeed = world.baseSpeed;
   elapsed = 0;
-  input.jumpQueued = false;
+  input.jumpRequests = 0;
   input.crouch = false;
   input.boost = false;
 
@@ -308,7 +310,7 @@ function rectsOverlap(a, b) {
 
 function queueJump() {
   if (state === STATE.RUNNING) {
-    input.jumpQueued = true;
+    input.jumpRequests = Math.min(input.jumpRequests + 1, player.maxJumps);
   } else if (state === STATE.GAME_OVER) {
     beginGame();
   }
@@ -410,27 +412,33 @@ function spawnCoinArc(startX, y, count) {
 }
 
 function handleJump() {
-  if (!input.jumpQueued) {
+  if (input.jumpRequests <= 0) {
     return;
   }
 
-  input.jumpQueued = false;
-
-  const canJump = player.grounded || player.jumpsUsed < player.maxJumps;
-  if (canJump) {
-    const isDoubleJump = !player.grounded && player.jumpsUsed > 0;
-    player.velocityY = input.boost ? -820 : -760;
-    player.grounded = false;
-    player.jumpsUsed += 1;
-    player.doubleJumpTimer = isDoubleJump ? 0.45 : 0;
-    input.crouch = false;
-    spawnDust(
-      player.x,
-      isDoubleJump ? player.footY - playerHeight() * 0.55 : player.footY,
-      isDoubleJump ? 14 : 8,
-      isDoubleJump ? "rgba(255, 246, 170, 0.78)" : "rgba(255, 224, 138, 0.72)"
-    );
+  const doubleJumpReady = player.airborneTimer >= 0.08;
+  const canJump = player.grounded || (player.jumpsUsed < player.maxJumps && doubleJumpReady);
+  if (!canJump) {
+    if (player.jumpsUsed >= player.maxJumps) {
+      input.jumpRequests = 0;
+    }
+    return;
   }
+
+  input.jumpRequests -= 1;
+  const isDoubleJump = !player.grounded && player.jumpsUsed > 0;
+  player.velocityY = input.boost ? -820 : -760;
+  player.grounded = false;
+  player.jumpsUsed += 1;
+  player.airborneTimer = 0;
+  player.doubleJumpTimer = isDoubleJump ? 0.45 : 0;
+  input.crouch = false;
+  spawnDust(
+    player.x,
+    isDoubleJump ? player.footY - playerHeight() * 0.55 : player.footY,
+    isDoubleJump ? 14 : 8,
+    isDoubleJump ? "rgba(255, 246, 170, 0.78)" : "rgba(255, 224, 138, 0.72)"
+  );
 }
 
 function updatePlayerState() {
@@ -485,6 +493,7 @@ function updatePlayer(dt) {
       player.velocityY = 0;
       player.grounded = true;
       player.jumpsUsed = 0;
+      player.airborneTimer = 0;
       break;
     }
   }
@@ -497,6 +506,11 @@ function updatePlayer(dt) {
     player.velocityY = 0;
     player.grounded = true;
     player.jumpsUsed = 0;
+    player.airborneTimer = 0;
+  }
+
+  if (!player.grounded) {
+    player.airborneTimer += dt;
   }
 
   if (player.invincibleTimer > 0) {
@@ -1065,6 +1079,8 @@ function setAction(action, active) {
 }
 
 function bindHoldButton(button, action) {
+  let lastTouchStart = 0;
+
   const start = (event) => {
     event.preventDefault();
     if (button.setPointerCapture && event.pointerId !== undefined) {
@@ -1083,7 +1099,18 @@ function bindHoldButton(button, action) {
     }
   };
 
-  button.addEventListener("pointerdown", start);
+  button.addEventListener("touchstart", (event) => {
+    lastTouchStart = performance.now();
+    start(event);
+  }, { passive: false });
+  button.addEventListener("touchend", end, { passive: false });
+  button.addEventListener("touchcancel", end, { passive: false });
+  button.addEventListener("pointerdown", (event) => {
+    if (event.pointerType === "touch" && performance.now() - lastTouchStart < 500) {
+      return;
+    }
+    start(event);
+  });
   button.addEventListener("pointerup", end);
   button.addEventListener("pointercancel", end);
   button.addEventListener("pointerleave", end);
